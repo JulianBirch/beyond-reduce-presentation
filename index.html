@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>reveal.js – The HTML Presentation Framework</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/monokai.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1>Beyond Reduce</h1>
+					<h3>A Taster of Recursion schemes</h3>
+					<p>
+						<small>Created by <a href="http://www.colourcoding.net/">Julian Birch</a> / <a href="http://twitter.com/JulianBirch">@JulianBirch</a></small>
+					</p>
+</section><section>
+<h2>Reduce is Great</h2>
+<ul style='float: left'>
+<li> Filter lists
+<li> Sum a list
+<li> Split a list
+<li style='color : #ff0' class='fragment current-visible' data-fragment-index="0"> Sort a list
+</ul>
+<ul style='float: right'>
+<li> Evaluate an expression
+<li> Find the depth of a tree
+<li style='color : #ff0' class='fragment current-visible' data-fragment-index="1"> Sort a list
+</ul>
+</section><section>
+  <h2>Let's Reinvent The Wheel</h2>
+<pre><code class='hljs clojure' data-trim>
+(def mylist {:head 1 :tail {:head 2 :tail {:head 3 :tail :nil}}})
+
+(defn head-map [f cell]
+  (if (= :nil cell)
+    :nil
+    (update cell :head f)))
+
+(defn tail-map [f {:keys [head tail] :as cell}]
+  (if (= :nil cell)
+    :nil
+    (update cell :tail f)))
+</code></pre>
+</section><section>
+<h2>Let's create map</h2>
+<pre><code class='hljs clojure' data-trim>
+(defn cata [map-recurse map-value l]
+  (let [cata2 (partial cata map-recurse map-value)]
+    (->> l
+         (map-recurse cata2)
+         map-value)))
+
+(cata tail-map (partial head-map inc) mylist)
+; {:head 2, :tail {:head 3, :tail {:head 4, :tail :nil}}}
+</code></pre>
+<p>Recurse, then map the value</p>
+<p class='fragment'>What happens if we swap map-recurse and
+  map-value?</p>
+</section><section>
+<h2>The inverse of reduce</h2>
+<pre><code class='hljs clojure' data-trim>
+(defn ana [map-recurse map-value l]
+  (let [ana2 (partial ana map-recurse map-value)]
+    (->> l
+         map-value
+         (map-recurse ana2))))
+
+(defn next-value [v]
+  (if (> v 3)
+    :nil
+    {:head v :tail (inc v)}))
+
+(ana tail-map next-value 0)
+; {:head 0, :tail {:head 1, :tail
+;   {:head 2, :tail {:head 3, :tail :nil}}}}</code></pre>
+<p>We just wrote <code>iterate</code></p>
+<p>Let's take these for a spin</p>
+</section><section>
+  <h2>Expression Tree</h2>
+<pre><code class='hljs clojure' data-trim>
+(defn evalop [val]
+  (if (map? val)
+    (let [{:keys [op l r]} val]
+      (case op
+        :add (+ l r)
+        :mul (* l r)
+        :neg (- l)
+        :sub (- l r)))
+    val))
+
+(def complex {:op :add
+              :l {:op :sub :l 3 :r 6}
+              :r {:op :mul :l {:op :neg :l 2} :r 9}})</code></pre>
+</section>
+<section>
+  <h2>An interpreter is just a catamorphism</h2>
+  <pre><code class='hljs clojure' data-trim>
+(defn tree-map [f cell]
+  (if (map? cell)
+    (let [c2 (update cell :l f)]
+      (if (= (:op cell) :neg)
+        c2
+        (update c2 :r f)))
+    cell))
+
+(cata tree-map evalop complex)
+; -21
+</code></pre></section>
+<section><h2>Depth-first Search</h2>
+<p>Same data structure, same <code>map-recurse</code>.</p>
+<pre><code class='hljs clojure' data-trim>
+(defn search [val]
+  (if (map? val)
+    (let [{:keys [op l r]} val]
+      (if (= op :neg)
+        l
+        (concat l r)))
+    [val]))
+
+(cata tree-map search complex)
+; (3 6 2 9)
+</code></pre>
+<p>How about breadth-first?</p>
+</section><section>
+<h2>Explode level by level</h2>
+<pre><code class='hljs clojure' data-trim>(defn next-level [cell]
+  (if (map? cell)
+    (let [new-items (->> cell
+                         :head
+                         (mapcat (juxt :l :r))
+                         (filter identity))
+          tail (if (empty? new-items)
+                   :nil
+                   {:head new-items :tail :nil})]
+      (assoc cell :tail tail))
+    cell))
+</code></pre>
+
+</section>
+<section><h2>Breadth-first search</h2>
+  <pre><code class='hljs clojure' data-trim>
+(defn non-maps [{:keys [head tail] :as opts}]
+  (filter #(not (map? %)) (concat head tail)))
+
+(cata tail-map non-maps
+  (ana tail-map next-level {:head [complex] :tail :nil}))
+; (3 6 9 2)</code></pre>
+<p>Can we do better?</p>
+</section>
+<section><h2>Why not both?</h2>
+  <p>How about if we mapped before and after the recurse step?</p>
+  <pre><code class='hljs clojure' data-trim>
+(defn hylo [map-recurse map-before map-after l]
+  (let [hylo2 (partial hylo map-recurse map-before map-after)]
+    (->> l
+         map-before
+         (map-recurse hylo2)
+         map-after)))
+
+(hylo tail-map next-level non-maps
+      {:head [complex] :tail :nil})
+</code></pre>
+<p>We get expand and contract in one efficient step.</p>
+<p>Can we do anything interesting with a more complex <code>recurse-map</code>?
+</section>
+
+<section>
+  <h2>Merge Sort: Splitting</h2>
+  <pre><code class='hljs clojure' data-trim>
+(defn sort-2 [[x y]]
+  (if (< x y) [x y] [y x]))
+
+(defn explode [x]
+  (let [c (count x)]
+    (case c
+          0 x
+          1 x
+          2 (sort-2 x)
+          ; :else
+          (let [[l r] (split-at (/ c 2) x)]
+            {:l l :r r}))))
+         </code></pre></section>
+
+<section>
+    <h2>Merge Sort: Merging</h2>
+    <pre><code class='hljs clojure' data-trim>
+(defn riffle [{:keys [l r]}]
+  (loop [l l r r result []]
+    (let [lhead (first l), rhead (first r)]
+      (cond
+        (nil? lhead)     (concat result r)
+        (nil? rhead)     (concat result l)
+        (<= lhead rhead) (recur (rest l) r (conj result lhead))
+        :else            (recur l (rest r) (conj result rhead))))))
+
+(defn collapse [x]
+  (if (map? x)
+    (riffle x)
+    x))</code></pre>
+            <p><code>riffle</code> adapted from code by Alexei Sholik</p>
+</section>
+<section>
+  <h2>Merge Sort is a Hylomorphism</h2>
+  <pre><code class='hljs clojure' data-trim>
+(defn binary-map [f x]
+  (if (map? x)
+    (-> x
+        (update :l f)
+        (update :r f))
+    x))
+
+(hylo binary-map explode collapse [9 3 6 7 0 1 8 2 4 5])
+; (0 1 2 3 4 5 6 7 8 9)
+</code></pre>
+
+</section>
+
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
