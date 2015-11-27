@@ -4,7 +4,7 @@
 	<head>
 		<meta charset="utf-8">
 
-		<title>reveal.js – The HTML Presentation Framework</title>
+		<title>Beyond Reduce</title>
 
 		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
 		<meta name="author" content="Hakim El Hattab">
@@ -60,57 +60,50 @@
 <li style='color : #ff0' class='fragment current-visible' data-fragment-index="1"> Sort a list
 </ul>
 </section><section>
-  <h2>Let's Reinvent The Wheel</h2>
-<pre><code class='hljs clojure' data-trim>
-(def mylist {:head 1 :tail {:head 2 :tail {:head 3 :tail :nil}}})
+                                  <h2>Let's Reinvent The Wheel</h2>
+
+<div style='position:relative'>
+<div style='background-image : url("img/b2tf.jpg"); position : absolute; top : 0; right : 50px; z-index : 1; width : 372px; height : 273px'>
+</div>
+  <pre><code class='hljs clojure' data-trim>
+(def mylist
+  {:head 1 :tail
+  {:head 2 :tail
+  {:head 3 :tail :nil}}})
 
 (defn head-map [f cell]
   (if (= :nil cell)
     :nil
     (update cell :head f)))
 
-(defn tail-map [f {:keys [head tail] :as cell}]
+(defn tail-map [f cell]
   (if (= :nil cell)
     :nil
     (update cell :tail f)))
-</code></pre>
+  </code></pre></div>
 </section><section>
-<h2>Let's create map</h2>
-<pre><code class='hljs clojure' data-trim>
-(defn cata [map-recurse map-value l]
-  (let [cata2 (partial cata map-recurse map-value)]
-    (->> l
-         (map-recurse cata2)
-         map-value)))
+<h2>Let's create map: Take 1</h2
+><pre><code class='hljs clojure' data-trim>
+(defn full-map [f l]
+  (head-map f (tail-map (partial full-map f) l)))
 
-(cata tail-map (partial head-map inc) mylist)
-; {:head 2, :tail {:head 3, :tail {:head 4, :tail :nil}}}
+; Or, with threading
+(defn full-map [f l]
+  (->> l
+       (tail-map (partial full-map f))
+       (head-map f)))
 </code></pre>
-<p>Recurse, then map the value</p>
-<p class='fragment'>What happens if we swap map-recurse and
-  map-value?</p>
-</section><section>
-<h2>The inverse of reduce</h2>
-<pre><code class='hljs clojure' data-trim>
-(defn ana [map-recurse map-value l]
-  (let [ana2 (partial ana map-recurse map-value)]
-    (->> l
-         map-value
-         (map-recurse ana2))))
-
-(defn next-value [v]
-  (if (> v 3)
-    :nil
-    {:head v :tail (inc v)}))
-
-(ana tail-map next-value 0)
-; {:head 0, :tail {:head 1, :tail
-;   {:head 2, :tail {:head 3, :tail :nil}}}}</code></pre>
-<p>We just wrote <code>iterate</code></p>
-<p>Let's take these for a spin</p>
+<p>We recurse, then map the value</p>
 </section><section>
   <h2>Expression Tree</h2>
-<pre><code class='hljs clojure' data-trim>
+  <div style='position:relative'>
+    <div style='background-image :
+         url("img/rarity_vector_by_ancientkale-d41djrp.png");
+         background-repeat : no-repeat;
+         transform: scaleX(1.2);
+       position : absolute; top : -2.2em; left : 15.5em; z-index : 1;
+       height : 11.6em; width : 11.6em; background-size : 11.6em'></div>
+  <pre><code class='hljs clojure' data-trim>
 (defn evalop [val]
   (if (map? val)
     (let [{:keys [op l r]} val]
@@ -124,10 +117,15 @@
 (def complex {:op :add
               :l {:op :sub :l 3 :r 6}
               :r {:op :mul :l {:op :neg :l 2} :r 9}})</code></pre>
-</section>
-<section>
-  <h2>An interpreter is just a catamorphism</h2>
+  <p>Let's write <code>map</code> for that</p>
+</div>
+
+</section><section>
+  <h2>Mapping a tree</h2>
   <pre><code class='hljs clojure' data-trim>
+(defn head-map-2 [f val]
+  (if (map? val) val (f val)))
+
 (defn tree-map [f cell]
   (if (map? cell)
     (let [c2 (update cell :l f)]
@@ -136,11 +134,98 @@
         (update c2 :r f)))
     cell))
 
+(defn full-map-2 [f l]
+  (head-map-2 f (tail-map-2 (partial full-map-2 f) l)))
+
+(full-map-2 inc complex)
+  </pre></code>
+  <p>Hey, hang up, that's exactly the same function!</p>
+</section><section>
+  <h2>Spreading our wings</h2>
+  <div style='position:relative'>
+<div style='background-image :
+     url("img/twilight_sparkle_showing_off_by_90sigma-d6yqsbq.png.png");
+     position : absolute; background-repeat : no-repeat;
+     top : 0.7em; right : -0.5em; z-index : 1; width : 10em; height :
+     10em; background-size : 10em'>
+</div>
+<pre><code class='hljs clojure' data-trim>
+(defn cata [map-recurse map-value l]
+  (let [cata2 (partial cata map-recurse map-value)]
+    (->> l
+         (map-recurse cata2)
+         map-value)))
+
+(cata tail-map (partial head-map inc) mylist)
+; {:head 2, :tail {:head 3,
+;    :tail {:head 4, :tail :nil}}}
+
+(cata tree-map (partial head-map-2 inc) complex)
+; {:op :add,
+;      :l {:op :sub, :l 4, :r 7},
+;      :r {:op :mul, :l {:op :neg, :l 3}, :r 10}}
+</code></pre>
+</div>
+<p>Recurse, then map the value</p>
+<p class='fragment'>What happens if we swap map-recurse and
+  map-value?</p>
+</section><section>
+  <h2>The inverse of reduce</h2>
+  <div style='position : relative'>
+    <div style='background-image :
+         url("img/angry_rainbow_dash_by_90sigma-d4upsrh.png");
+         background-repeat : no-repeat;
+       position : absolute; top : 0em; left : -0.5em; z-index : 1;
+         height : 15.5em; width : 7.5em; background-size : 7.5em'></div>
+    <pre><code class='hljs clojure'>
+        (defn ana [map-recurse map-value l]
+                 (let [ana2 (partial ana map-recurse map-value)]
+                   (->> l
+                        map-value
+                        (map-recurse ana2))))
+
+               (defn next-value [v]
+                 (if (> v 3)
+                   :nil
+                   {:head v :tail (inc v)}))
+
+(ana tail-map next-value 0)
+; {:head 0, :tail {:head 1, :tail
+;   {:head 2, :tail {:head 3, :tail :nil}}}}</code></pre>
+<p>We just wrote <code>iterate</code></p>
+  </div>
+</section><section>
+  <h2>Downsides</h2>
+  <ul>
+    <li>Value mapping functions need to know structure, not just
+      values.
+    <li><code>cata</code> and <code>ana</code> aren't tail recursive.
+  </ul>
+</section><section>
+  <h2>It's just an expression (evaluation)</h2>
+  <div style='position:relative'>
+  <pre><code class='hljs clojure' data-trim>
+(defn cata [map-recurse map-value l]
+  (let [cata2 (partial cata map-recurse map-value)]
+    (->> l
+         (map-recurse cata2)
+         map-value)))
+
 (cata tree-map evalop complex)
 ; -21
-</code></pre></section>
-<section><h2>Depth-first Search</h2>
-<p>Same data structure, same <code>map-recurse</code>.</p>
+</code></pre></div>
+</section><section>
+<h2>Depth-first Search</h2>
+  <p>Same data structure, same <code>map-recurse</code>.</p>
+  <div style='position : relative'>
+    <div style='background-image :
+     url("img/fluttershy_by_90sigma-d502gwx.png");
+     position : absolute; background-repeat : no-repeat;
+     top : -0.5em; right : 0; z-index : 1; width : 10.5em; height :
+         10.5em; background-size : 10.5em;
+     transform: scaleX(-1);
+     filter: FlipH;'>
+</div>
 <pre><code class='hljs clojure' data-trim>
 (defn search [val]
   (if (map? val)
@@ -153,6 +238,7 @@
 (cata tree-map search complex)
 ; (3 6 2 9)
 </code></pre>
+</div>
 <p>How about breadth-first?</p>
 </section><section>
 <h2>Explode level by level</h2>
@@ -179,8 +265,8 @@
   (ana tail-map next-level {:head [complex] :tail :nil}))
 ; (3 6 9 2)</code></pre>
 <p>Can we do better?</p>
-</section>
-<section><h2>Why not both?</h2>
+</section><section>
+  <h2>Why not both?</h2>
   <p>How about if we mapped before and after the recurse step?</p>
   <pre><code class='hljs clojure' data-trim>
 (defn hylo [map-recurse map-before map-after l]
@@ -199,6 +285,14 @@
 
 <section>
   <h2>Merge Sort: Splitting</h2>
+  <div style='position : relative'>
+    <div style='background-image :
+     url("img/applejack_by_90sigma-d7a1e82.png");
+     position : absolute; background-repeat : no-repeat;
+     top : -0.5em; right : 0.7em; z-index : 1; width : 8.5em; height :
+         10.5em; background-size : 8.5em;
+     transform: scaleX(-1);
+     filter: FlipH;'></div>
   <pre><code class='hljs clojure' data-trim>
 (defn sort-2 [[x y]]
   (if (< x y) [x y] [y x]))
@@ -212,7 +306,9 @@
           ; :else
           (let [[l r] (split-at (/ c 2) x)]
             {:l l :r r}))))
-         </code></pre></section>
+         </code></pre>
+  </div>
+</section>
 
 <section>
     <h2>Merge Sort: Merging</h2>
@@ -230,10 +326,18 @@
   (if (map? x)
     (riffle x)
     x))</code></pre>
-            <p><code>riffle</code> adapted from code by Alexei Sholik</p>
+            <p><code>riffle</code> adapted from <a href='https://gist.github.com/alco/2135276'>code by Alexei Sholik</a></p>
 </section>
 <section>
   <h2>Merge Sort is a Hylomorphism</h2>
+  <div style='position : relative'>
+    <div style='background-image :
+     url("img/pinkie_pie_by_90sigma-d50f228.png");
+     position : absolute; background-repeat : no-repeat;
+     top : -1.5em; right : 0.7em; z-index : 1; width : 10.5em; height :
+         10.5em; background-size : 10.5em;
+     transform: scaleX(-1);
+     filter: FlipH;'></div>
   <pre><code class='hljs clojure' data-trim>
 (defn binary-map [f x]
   (if (map? x)
@@ -242,11 +346,25 @@
         (update :r f))
     x))
 
-(hylo binary-map explode collapse [9 3 6 7 0 1 8 2 4 5])
+(hylo binary-map
+      explode
+      collapse
+      [9 3 6 7 0 1 8 2 4 5])
 ; (0 1 2 3 4 5 6 7 8 9)
 </code></pre>
-
+</div>
+</section><section>
+<img src='img/lauren_faust_by_90sigma-d8x1o5x.png' style='float :
+     left; width : 10.5em; padding-left : 0.5em; margin-top: 1em;
+     background : rgba(0,0,0,0)'  />  <h2>Further Reading</h2>
+  <p>Understanding F-Algebras
+    <a href='https://goo.gl/AKyZft'>https://goo.gl/AKyZft</a></p>
+  <p>The Under-Appreciated Unfold
+    <a href='http://goo.gl/vD1P0I'>http://goo.gl/vD1P0I</a></p>
+  <h2>Image Credits</h2>
+  <p><a href='http://90sigma.deviantart.com/'>90sigma</a> and <a href='http://ancientkale.deviantart.com/'>AncientKale</a></p>
 </section>
+
 
 
 			</div>
