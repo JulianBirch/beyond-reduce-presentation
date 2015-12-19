@@ -6,8 +6,9 @@
 
 		<title>Beyond Reduce</title>
 
-		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
-		<meta name="author" content="Hakim El Hattab">
+		<meta name="description" content="An introduction to
+                                                  recursion schemes">
+		<meta name="author" content="Julian Birch">
 
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -28,13 +29,51 @@
 			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
 			document.getElementsByTagName( 'head' )[0].appendChild( link );
 		</script>
-
+<style>
+.pony .rarity {
+  background-image :
+    url("img/rarity_vector_by_ancientkale-d41djrp.png");
+}
+.pony .twilight {
+  background-image :
+     url("img/twilight_sparkle_showing_off_by_90sigma-d6yqsbq.png.png");
+}
+.pony .rainbow {
+  background-image :
+         url("img/angry_rainbow_dash_by_90sigma-d4upsrh.png");
+}
+.pony .fluttershy {
+  background-image :
+     url("img/fluttershy_by_90sigma-d502gwx.png");
+}
+.pony .applejack {
+background-image :
+     url("img/applejack_by_90sigma-d7a1e82.png");
+}
+.pony .pinkie {
+background-image :
+     url("img/pinkie_pie_by_90sigma-d50f228.png");
+}
+.pony .sunset {
+background-image :
+     url("img/sunset_shimmer_by_90sigma-d77nn9f.png");
+}
+</style>
 		<!--[if lt IE 9]>
 		<script src="lib/js/html5shiv.js"></script>
 		<![endif]-->
+                <script type='text/javascript'>
+                  document.onkeypress = function (oevt) {
+                    var evt = oevt || window.event;
+                    var d = document.getElementById("root");
+                    if (/x/.test(String.fromCharCode(evt.charCode))) {
+                      d.className = d.className == "pony" ? "" : "pony";
+                    }
+                  }
+                </script>
 	</head>
 
-	<body>
+	<body id='root'>
 
 		<div class="reveal">
 
@@ -97,8 +136,7 @@
 </section><section>
   <h2>Expression Tree</h2>
   <div style='position:relative'>
-    <div style='background-image :
-         url("img/rarity_vector_by_ancientkale-d41djrp.png");
+    <div class='rarity' style='
          background-repeat : no-repeat;
          transform: scaleX(1.2);
        position : absolute; top : -2.2em; left : 15.5em; z-index : 1;
@@ -122,6 +160,11 @@
 
 </section><section>
   <h2>Mapping a tree</h2>
+  <div style='position:relative'>
+    <div class='sunset' style='
+         background-repeat : no-repeat;
+       position : absolute; top : -0.8em; left : 15.5em; z-index : 1;
+       height : 11.6em; width : 11.6em; background-size : 9.4em'></div>
   <pre><code class='hljs clojure' data-trim>
 (defn head-map-2 [f val]
   (if (map? val) val (f val)))
@@ -139,12 +182,13 @@
 
 (full-map-2 inc complex)
   </pre></code>
+  </div>
   <p>Hey, hang up, that's exactly the same function!</p>
 </section><section>
+
   <h2>Spreading our wings</h2>
   <div style='position:relative'>
-<div style='background-image :
-     url("img/twilight_sparkle_showing_off_by_90sigma-d6yqsbq.png.png");
+<div class='twilight' style='
      position : absolute; background-repeat : no-repeat;
      top : 0.7em; right : -0.5em; z-index : 1; width : 10em; height :
      10em; background-size : 10em'>
@@ -172,13 +216,13 @@
 </section><section>
   <h2>The inverse of reduce</h2>
   <div style='position : relative'>
-    <div style='background-image :
-         url("img/angry_rainbow_dash_by_90sigma-d4upsrh.png");
+    <div class='rainbow' style='
          background-repeat : no-repeat;
        position : absolute; top : 0em; left : -0.5em; z-index : 1;
-         height : 15.5em; width : 7.5em; background-size : 7.5em'></div>
-    <pre><code class='hljs clojure'>
-        (defn ana [map-recurse map-value l]
+         height : 15.5em; width : 7.5em; background-size :
+         7.5em'></div>
+
+<pre><code class='hljs clojure'>               (defn ana [map-recurse map-value l]
                  (let [ana2 (partial ana map-recurse map-value)]
                    (->> l
                         map-value
@@ -218,8 +262,7 @@
 <h2>Depth-first Search</h2>
   <p>Same data structure, same <code>map-recurse</code>.</p>
   <div style='position : relative'>
-    <div style='background-image :
-     url("img/fluttershy_by_90sigma-d502gwx.png");
+    <div class='fluttershy' style='
      position : absolute; background-repeat : no-repeat;
      top : -0.5em; right : 0; z-index : 1; width : 10.5em; height :
          10.5em; background-size : 10.5em;
@@ -286,8 +329,7 @@
 <section>
   <h2>Merge Sort: Splitting</h2>
   <div style='position : relative'>
-    <div style='background-image :
-     url("img/applejack_by_90sigma-d7a1e82.png");
+    <div class='applejack' style='
      position : absolute; background-repeat : no-repeat;
      top : -0.5em; right : 0.7em; z-index : 1; width : 8.5em; height :
          10.5em; background-size : 8.5em;
@@ -331,8 +373,7 @@
 <section>
   <h2>Merge Sort is a Hylomorphism</h2>
   <div style='position : relative'>
-    <div style='background-image :
-     url("img/pinkie_pie_by_90sigma-d50f228.png");
+    <div class='pinkie' style='
      position : absolute; background-repeat : no-repeat;
      top : -1.5em; right : 0.7em; z-index : 1; width : 10.5em; height :
          10.5em; background-size : 10.5em;
